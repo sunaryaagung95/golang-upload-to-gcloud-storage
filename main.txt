@@ -1,0 +1,52 @@
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+)
+
+func uploadFile(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Uploading file")
+
+	// 1. Parse input, type multipart/form-data
+	r.ParseMultipartForm(10 << 20)
+
+	// 2. retrieve file from posted form-data
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	fmt.Printf("Uploaded file: %+v\n", handler.Filename)
+	fmt.Printf("File size: %+v\n", handler.Size)
+	fmt.Printf("MIME Header: %+v\n", handler.Header)
+
+	// 3. write temp file on our server
+	tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	if err != nil {
+		panic(err)
+
+	}
+	defer tempFile.Close()
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+	tempFile.Write(fileBytes)
+
+	// 4. return if the file has work or not
+	fmt.Fprintf(w, "Uplaoded")
+
+}
+
+func setupRouter() {
+	http.HandleFunc("/upload", uploadFile)
+	http.ListenAndServe(":8080", nil)
+}
+
+func main() {
+	fmt.Println("Hello upload")
+	setupRouter()
+}
